@@ -7,6 +7,8 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 import java.util.*
 import kotlin.reflect.KClass
+import kotlin.reflect.KMutableProperty0
+import kotlin.reflect.KMutableProperty1
 
 fun <T: Any> KClass<T>.listType(): Type {
     return TypeToken.getParameterized(List::class.java, java).type
@@ -111,5 +113,17 @@ open class Repository<Output: Any>(
             output
         }
         return this
+    }
+
+    fun assign(property: KMutableProperty0<Output>): Repository<Output> = assign(property, null)
+
+    fun assign(property: KMutableProperty0<Output>, looper: Looper?): Repository<Output> {
+        return sink(looper) { property.set(it) }
+    }
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root): Repository<Output> = assign(property, instance, null)
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, looper: Looper?): Repository<Output> {
+        return sink(looper) { property.set(instance, it) }
     }
 }
