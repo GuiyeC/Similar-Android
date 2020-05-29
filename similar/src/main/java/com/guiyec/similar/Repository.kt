@@ -1,5 +1,7 @@
 package com.guiyec.similar
 
+import android.os.Handler
+import android.os.Looper
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
@@ -13,7 +15,7 @@ fun <T: Any> KClass<T>.listType(): Type {
 open class Repository<Output: Any>(
     val request: Request,
     var dispatcher: Dispatcher,
-    private val transformBlock: ((String) -> Output)
+    private var transformBlock: ((String) -> Output)
 ) {
 
     constructor(type: Type, path: String, gson: Gson, dispatcher: Dispatcher) :
@@ -96,11 +98,18 @@ open class Repository<Output: Any>(
         return Repository(request, dispatcher) { mapBlock(transformBlock(it)) }
     }
 
-    fun sink(sinkBlock: (Output) -> Unit): Repository<Output> {
-        return Repository(request, dispatcher) {
-            val output = transformBlock(it)
-            sinkBlock(output)
+    fun sink(block: (Output) -> Unit): Repository<Output> = sink(null, block)
+
+    fun sink(looper: Looper?, block: (Output) -> Unit): Repository<Output> {
+        val previousTransformBlock = transformBlock
+        val newBlock = if (looper == null) block else { output ->
+            Handler(looper).post { block.invoke(output) }
+        }
+        transformBlock = {
+            val output = previousTransformBlock(it)
+            newBlock(output)
             output
         }
+        return this
     }
 }
