@@ -1,6 +1,7 @@
 package com.guiyec.similar
 
 import com.google.gson.Gson
+import java.io.File
 
 data class Request(
     var path: String,
@@ -12,6 +13,6 @@ data class Request(
 ) {
     sealed class Data {
         data class Json(val data: Any, val gson: Gson = Similar.defaultGson): Data()
-        data class Multipart(val name: String, val mimeType: String, val fileName: String, val fileData: ByteArray): Data()
+        data class Multipart(val name: String, val mimeType: String, val fileName: String, val file: File): Data()
     }
 }

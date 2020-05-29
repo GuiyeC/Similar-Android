@@ -1,13 +1,12 @@
 package com.guiyec.similar
 
 import android.util.Log
-import okhttp3.Call
-import okhttp3.Callback
+import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import java.io.IOException
 
 
@@ -15,9 +14,8 @@ class NetworkDispatcher: Dispatcher {
     private val client = OkHttpClient()
 
     override fun execute(request: Request): Task<String> {
-        val urlBuilder = request.path.toHttpUrlOrNull()?.newBuilder() ?: run {
-            throw RuntimeException("Invalid base url")
-        }
+        val urlBuilder = request.path.toHttpUrlOrNull()?.newBuilder()
+        require(urlBuilder != null) { "Invalid url" }
         urlBuilder.addPathSegments(request.path)
         request.parameters?.forEach {
             urlBuilder.addQueryParameter(it.key, it.value)
@@ -70,7 +68,14 @@ fun okhttp3.Request.Builder.setData(method: HttpMethod, data: Request.Data?) {
             method(method.value, body)
             addHeader("Content-Type", "application/json")
         }
-        is Request.Data.Multipart -> TODO()
+        is Request.Data.Multipart -> {
+            val fileBody = data.file.asRequestBody(data.mimeType.toMediaTypeOrNull())
+            val requestBody: RequestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(data.name, data.fileName, fileBody)
+                .build()
+            method(method.value, requestBody)
+        }
         null -> method(method.value, null)
     }
 }
