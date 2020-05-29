@@ -76,6 +76,7 @@ open class Repository<Output: Any>(
         updateTask = dispatcher.execute(request)
             .sink(this::handleData)
             .catch(this::handleError)
+            .always { updateTask = null }
     }
 
     private fun handleData(data: String) {
