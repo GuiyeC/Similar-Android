@@ -1,5 +1,7 @@
 package com.guiyec.similar
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.google.gson.Gson
 import java.lang.reflect.Type
@@ -7,10 +9,10 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty0
 import kotlin.reflect.KMutableProperty1
 
-class Task<Output>() {
+class Task<Output> {
     var isCancelled: Boolean = false
         private set
-    var cancelBlock: (() -> Unit)? = null
+    internal var cancelBlock: (() -> Unit)? = null
     private var alwaysBlock: (() -> Unit)? = null
         set(value) {
             field = value
@@ -53,45 +55,62 @@ class Task<Output>() {
             error?.let { errorBlock?.invoke(it) }
         }
 
-    constructor(output: Output): this() {
+    internal constructor()
+
+    internal constructor(output: Output): this() {
         complete(output)
     }
 
-    constructor(error: RequestError): this() {
+    internal constructor(error: RequestError): this() {
         fail(error)
     }
 
-    fun complete(output: Output) {
+    internal fun complete(output: Output) {
         this.output = output
     }
 
-    fun fail(error: RequestError) {
+    internal fun fail(error: RequestError) {
         this.error = error
     }
 
-    fun sink(sinkBlock: ((Output) -> Unit)): Task<Output> {
+    fun sink(block: ((Output) -> Unit)): Task<Output> = sink(null, block)
+
+    fun sink(looper: Looper?, block: ((Output) -> Unit)): Task<Output> {
         val previousSinkBlock = completionBlock
+        val newBlock = if (looper == null) block else { output ->
+            Handler(looper).post { block.invoke(output) }
+        }
         completionBlock = {
             previousSinkBlock?.invoke(it)
-            sinkBlock(it)
+            newBlock(it)
         }
         return this
     }
 
-    fun catch(catchBlock: ((RequestError) -> Unit)): Task<Output> {
+    fun catch(block: ((RequestError) -> Unit)): Task<Output> = catch(null, block)
+
+    fun catch(looper: Looper?, block: ((RequestError) -> Unit)): Task<Output> {
         val previousErrorBlock = errorBlock
+        val newBlock = if (looper == null) block else { error ->
+            Handler(looper).post { block.invoke(error) }
+        }
         errorBlock = {
             previousErrorBlock?.invoke(it)
-            catchBlock(it)
+            newBlock(it)
         }
         return this
     }
 
-    fun always(alwaysBlock: (() -> Unit)): Task<Output> {
+    fun always(block: (() -> Unit)): Task<Output> = always(null, block)
+
+    fun always(looper: Looper?, block: (() -> Unit)): Task<Output> {
         val previousAlwaysBlock = this.alwaysBlock
+        val newBlock = if (looper == null) block else { ->
+            Handler(looper).post(block)
+        }
         this.alwaysBlock = {
             previousAlwaysBlock?.invoke()
-            alwaysBlock()
+            newBlock()
         }
         return this
     }
@@ -130,12 +149,16 @@ class Task<Output>() {
         return guard(guardBlock, { error })
     }
 
-    fun assign(property: KMutableProperty0<Output>): Task<Output> {
-        return sink { property.set(it) }
+    fun assign(property: KMutableProperty0<Output>): Task<Output> = assign(property, null)
+
+    fun assign(property: KMutableProperty0<Output>, looper: Looper?): Task<Output> {
+        return sink(looper) { property.set(it) }
     }
 
-    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root): Task<Output> {
-        return sink { property.set(instance, it) }
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root): Task<Output> = assign(property, instance, null)
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, looper: Looper?): Task<Output> {
+        return sink(looper) { property.set(instance, it) }
     }
 
     fun <NewOutput> then(taskBlock: (Output) -> Task<NewOutput>): Task<NewOutput> {
@@ -168,8 +191,16 @@ class Task<Output>() {
         return wrap({ _, task -> task.complete(Unit) })
     }
 
-    fun <Error: Any> catch(targetClass: KClass<Error>, gson: Gson = Similar.defaultGson, block: ((Int, Error) -> Unit)): Task<Output> {
+    fun <Error: Any> catch(targetClass: KClass<Error>, block: ((Int, Error) -> Unit)): Task<Output> {
+        return catch(targetClass, Similar.defaultGson, block)
+    }
+
+    fun <Error: Any> catch(targetClass: KClass<Error>, gson: Gson, block: ((Int, Error) -> Unit)): Task<Output> {
         return catch(targetClass.java, gson, block)
+    }
+
+    fun <Error: Any> catch(type: Type, block: ((Int, Error) -> Unit)): Task<Output> {
+        return catch(type, Similar.defaultGson, block)
     }
 
     fun <Error: Any> catch(type: Type, gson: Gson = Similar.defaultGson, block: ((Int, Error) -> Unit)): Task<Output> {

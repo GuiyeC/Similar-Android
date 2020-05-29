@@ -13,28 +13,41 @@ fun <T: Any> KClass<T>.listType(): Type {
 open class Repository<Output: Any>(
     val request: Request,
     var dispatcher: Dispatcher,
-    val transformBlock: ((String) -> Output)
+    private val transformBlock: ((String) -> Output)
 ) {
-    constructor(type: Type, path: String, gson: Gson = Similar.defaultGson, dispatcher: Dispatcher) :
+
+    constructor(type: Type, path: String, gson: Gson, dispatcher: Dispatcher) :
             this(Request(path), dispatcher, { gson.fromJson<Output>(it, type) })
 
-    constructor(type: KClass<Output>, path: String, gson: Gson = Similar.defaultGson, dispatcher: Dispatcher) :
+    constructor(type: Type, path: String, dispatcher: Dispatcher) :
+            this(type, path, Similar.defaultGson, dispatcher)
+
+    constructor(type: KClass<Output>, path: String, gson: Gson, dispatcher: Dispatcher) :
             this(type.java, path, gson, dispatcher)
 
-    constructor(type: Type, request: Request, gson: Gson = Similar.defaultGson, dispatcher: Dispatcher) :
+    constructor(type: KClass<Output>, path: String, dispatcher: Dispatcher) :
+            this(type, path, Similar.defaultGson, dispatcher)
+
+    constructor(type: Type, request: Request, gson: Gson, dispatcher: Dispatcher) :
             this(request, dispatcher, { gson.fromJson<Output>(it, type) })
 
-    constructor(type: KClass<Output>, request: Request, gson: Gson = Similar.defaultGson, dispatcher: Dispatcher) :
+    constructor(type: Type, request: Request, dispatcher: Dispatcher) :
+            this(type, request, Similar.defaultGson, dispatcher)
+
+    constructor(type: KClass<Output>, request: Request, gson: Gson , dispatcher: Dispatcher) :
             this(type.java, request, gson, dispatcher)
 
-    var data: Output? = null
+    constructor(type: KClass<Output>, request: Request, dispatcher: Dispatcher) :
+            this(type, request, Similar.defaultGson, dispatcher)
+
+    private var data: Output? = null
         set(value) {
             field = value
             updatedDate = if (value == null) null else Date()
         }
-    var updatedDate: Date? = null
-    var updateTask: Task<String>? = null
-    var currentTasks: MutableList<Task<Output>> = mutableListOf()
+    private var updatedDate: Date? = null
+    private var updateTask: Task<String>? = null
+    private var currentTasks: MutableList<Task<Output>> = mutableListOf()
 
     fun fetch(forceUpdate: Boolean = false): Task<Output> {
         if (forceUpdate) {
@@ -54,14 +67,14 @@ open class Repository<Output: Any>(
         return task
     }
 
-    fun updateIfNecessary() {
+    private fun updateIfNecessary() {
         if (updateTask != null) return
         updateTask = dispatcher.execute(request)
             .sink(this::handleData)
             .catch(this::handleError)
     }
 
-    fun handleData(data: String) {
+    private fun handleData(data: String) {
         try {
             val parsedData = transformBlock(data)
             this.data = parsedData
@@ -73,7 +86,7 @@ open class Repository<Output: Any>(
         }
     }
 
-    fun handleError(error: RequestError) {
+    private fun handleError(error: RequestError) {
         val currentTasks = this.currentTasks.toList()
         this.currentTasks.clear()
         currentTasks.forEach { it.fail(error) }
