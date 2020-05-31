@@ -17,12 +17,11 @@ open class NetworkDispatcher: Dispatcher {
     override fun execute(request: Request): Task<String> {
         val urlBuilder = request.path.toHttpUrlOrNull()?.newBuilder()
         require(urlBuilder != null) { "Invalid url" }
-        urlBuilder.addPathSegments(request.path)
         request.parameters?.forEach {
             urlBuilder.addQueryParameter(it.key, it.value)
         }
         val requestBuilder = okhttp3.Request.Builder()
-            .url(request.path)
+            .url(urlBuilder.build())
         request.headers?.forEach {
             requestBuilder.addHeader(it.key, it.value)
         }
