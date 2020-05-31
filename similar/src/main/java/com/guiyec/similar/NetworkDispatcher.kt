@@ -1,14 +1,15 @@
 package com.guiyec.similar
 
 import android.util.Log
-import okhttp3.*
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.io.IOException
-
 
 open class NetworkDispatcher: Dispatcher {
     private val client = OkHttpClient()
@@ -69,11 +70,9 @@ fun okhttp3.Request.Builder.setData(method: HttpMethod, data: Request.Data?) {
             addHeader("Content-Type", "application/json")
         }
         is Request.Data.Multipart -> {
-            val fileBody = data.file.asRequestBody(data.mimeType.toMediaTypeOrNull())
-            val requestBody: RequestBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart(data.name, data.fileName, fileBody)
-                .build()
+            val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
+            data.parts.forEach { builder.addFormDataPart(it.name, it.fileName, it.data) }
+            val requestBody = builder.build()
             method(method.value, requestBody)
         }
         null -> method(method.value, null)
