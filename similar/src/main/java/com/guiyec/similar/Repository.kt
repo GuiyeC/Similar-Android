@@ -44,12 +44,13 @@ open class Repository<Output: Any>(
     constructor(type: KClass<Output>, request: Request, dispatcher: Dispatcher) :
             this(type, request, Similar.defaultGson, dispatcher)
 
-    private var data: Output? = null
+    var data: Output? = null
         set(value) {
             field = value
             updatedDate = if (value == null) null else Date()
         }
-    private var updatedDate: Date? = null
+    var updatedDate: Date? = null
+        internal set
     private var updateTask: Task<String>? = null
     private var currentTasks: MutableList<Task<Output>> = mutableListOf()
 
