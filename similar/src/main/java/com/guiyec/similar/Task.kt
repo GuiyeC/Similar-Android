@@ -12,7 +12,7 @@ import kotlin.reflect.KMutableProperty1
 class Task<Output> {
     var isCancelled: Boolean = false
         private set
-    internal var cancelBlock: (() -> Unit)? = null
+    var cancelBlock: (() -> Unit)? = null
     private var alwaysBlock: (() -> Unit)? = null
         set(value) {
             field = value
@@ -55,21 +55,21 @@ class Task<Output> {
             error?.let { errorBlock?.invoke(it) }
         }
 
-    internal constructor()
+    constructor()
 
-    internal constructor(output: Output): this() {
+    constructor(output: Output): this() {
         complete(output)
     }
 
-    internal constructor(error: RequestError): this() {
+    constructor(error: RequestError): this() {
         fail(error)
     }
 
-    internal fun complete(output: Output) {
+    fun complete(output: Output) {
         this.output = output
     }
 
-    internal fun fail(error: RequestError) {
+    fun fail(error: RequestError) {
         this.error = error
     }
 

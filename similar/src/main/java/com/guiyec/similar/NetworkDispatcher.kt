@@ -10,7 +10,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
 
-class NetworkDispatcher: Dispatcher {
+open class NetworkDispatcher: Dispatcher {
     private val client = OkHttpClient()
 
     override fun execute(request: Request): Task<String> {
