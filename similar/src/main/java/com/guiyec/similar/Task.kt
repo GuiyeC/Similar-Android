@@ -4,6 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.google.gson.Gson
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
 import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty0
@@ -191,6 +193,15 @@ class Task<Output> {
         return wrap({ _, task -> task.complete(Unit) })
     }
 
+    fun <Error: Any> catch(serializer: KSerializer<Error>, json: Json = Similar.defaultJson, block: ((Int, Error) -> Unit)): Task<Output> {
+        return catch {
+            if (it is RequestError.ServerError && it.data != null) {
+                val decodedError = json.decodeFromString(serializer, it.data)
+                block.invoke(it.code, decodedError)
+            }
+        }
+    }
+
     fun <Error: Any> catch(targetClass: KClass<Error>, block: ((Int, Error) -> Unit)): Task<Output> {
         return catch(targetClass, Similar.defaultGson, block)
     }
@@ -211,6 +222,14 @@ class Task<Output> {
             }
         }
     }
+}
+
+fun <NewOutput: Any> Task<String>.decode(serializer: KSerializer<NewOutput>, json: Json = Similar.defaultJson): Task<NewOutput> {
+    return wrap({ data, task ->
+        val entity = json.decodeFromString(serializer, data)
+        Log.i("Task Decode", entity.toString())
+        task.complete(entity)
+    })
 }
 
 fun <NewOutput: Any> Task<String>.decode(targetClass: KClass<NewOutput>, gson: Gson = Similar.defaultGson): Task<NewOutput> {

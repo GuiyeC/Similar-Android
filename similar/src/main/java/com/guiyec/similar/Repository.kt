@@ -4,6 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
 import java.lang.reflect.Type
 import java.util.*
 import kotlin.reflect.KClass
@@ -19,6 +21,8 @@ open class Repository<Output: Any>(
     var dispatcher: Dispatcher,
     private var transformBlock: ((String) -> Output)
 ) {
+    constructor(serializer: KSerializer<Output>, json: Json = Similar.defaultJson, request: Request, dispatcher: Dispatcher) :
+            this(request, dispatcher, { json.decodeFromString(serializer, it) })
 
     constructor(type: Type, path: String, gson: Gson, dispatcher: Dispatcher) :
             this(Request(path), dispatcher, { gson.fromJson<Output>(it, type) })

@@ -1,6 +1,8 @@
 package com.guiyec.similar
 
 import com.google.gson.Gson
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json as KotlinJson
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -17,7 +19,13 @@ data class Request(
     var data: Data? = null
 ) {
     sealed class Data {
-        data class Json(val data: Any, val gson: Gson = Similar.defaultGson): Data()
+        data class Json<T: Any>(val jsonBlock: () -> String): Data() {
+            constructor(jsonString: String) : this({ jsonString })
+            constructor(data: T, gson: Gson = Similar.defaultGson) : this({ gson.toJson(data) })
+            constructor(data: T, serializer: KSerializer<T>) : this({ KotlinJson.encodeToString(serializer, data) })
+
+            val jsonString: String get() = jsonBlock()
+        }
         data class Multipart(val parts: List<DataPart>): Data()
     }
 

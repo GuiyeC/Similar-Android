@@ -1,11 +1,13 @@
 package com.guiyec.similar
 
 import com.google.gson.Gson
+import kotlinx.serialization.json.Json
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
 
 object Similar {
     var defaultGson: Gson = Gson()
+    var defaultJson: Json = Json.Default
 
     @Suppress("UNCHECKED_CAST")
     fun <O1, O2> combine(task1: Task<O1>, 

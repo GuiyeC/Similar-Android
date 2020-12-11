@@ -61,8 +61,8 @@ open class NetworkDispatcher: Dispatcher {
 
 fun okhttp3.Request.Builder.setData(method: HttpMethod, data: Request.Data?) {
     when (data) {
-        is Request.Data.Json -> {
-            val jsonBody = data.gson.toJson(data.data)
+        is Request.Data.Json<*> -> {
+            val jsonBody = data.jsonString
             Log.i("NetworkDispatcher", jsonBody)
             val body = jsonBody.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
             method(method.value, body)
