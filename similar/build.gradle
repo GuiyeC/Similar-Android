@@ -8,7 +8,7 @@ ext {
     publishedGroupId = 'com.guiyec.similar'
     libraryName = 'similar'
     artifact = 'similar'
-    libraryVersion = '0.4.1'
+    libraryVersion = '0.4.2'
     libraryDescription = 'Android networking library that allows having similar code in multiplatform apps.'
     siteUrl = 'https://github.com/guiyec/Similar-Android'
     gitUrl = 'https://github.com/guiyec/Similar-Android.git'
@@ -29,7 +29,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 30
         versionCode 1
-        versionName "0.4.1"
+        versionName "0.4.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"

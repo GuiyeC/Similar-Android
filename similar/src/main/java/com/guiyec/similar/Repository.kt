@@ -21,6 +21,9 @@ open class Repository<Output: Any>(
     var dispatcher: Dispatcher,
     private var transformBlock: ((String) -> Output)
 ) {
+    constructor(serializer: KSerializer<Output>, json: Json = Similar.defaultJson, path: String, dispatcher: Dispatcher) :
+            this(Request(path), dispatcher, { json.decodeFromString(serializer, it) })
+
     constructor(serializer: KSerializer<Output>, json: Json = Similar.defaultJson, request: Request, dispatcher: Dispatcher) :
             this(request, dispatcher, { json.decodeFromString(serializer, it) })
 
