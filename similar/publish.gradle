@@ -90,3 +90,7 @@ bintray {
         }
     }
 }
+
+// To upload run:
+// $./gradlew install
+// $./gradlew bintrayUpload

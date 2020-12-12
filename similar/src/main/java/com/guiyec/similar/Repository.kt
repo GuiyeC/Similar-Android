@@ -5,6 +5,7 @@ import android.os.Looper
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.lang.reflect.Type
 import java.util.*
@@ -16,40 +17,53 @@ fun <T: Any> KClass<T>.listType(): Type {
     return TypeToken.getParameterized(List::class.java, java).type
 }
 
+fun <T: Any> KSerializer<T>.list(): KSerializer<List<T>> {
+    return ListSerializer(this)
+}
+
 open class Repository<Output: Any>(
     val request: Request,
     var dispatcher: Dispatcher,
     private var transformBlock: ((String) -> Output)
 ) {
-    constructor(serializer: KSerializer<Output>, json: Json = Similar.defaultJson, path: String, dispatcher: Dispatcher) :
-            this(Request(path), dispatcher, { json.decodeFromString(serializer, it) })
-
-    constructor(serializer: KSerializer<Output>, json: Json = Similar.defaultJson, request: Request, dispatcher: Dispatcher) :
+    constructor(serializer: KSerializer<Output>, json: Json, request: Request, dispatcher: Dispatcher) :
             this(request, dispatcher, { json.decodeFromString(serializer, it) })
 
-    constructor(type: Type, path: String, gson: Gson, dispatcher: Dispatcher) :
-            this(Request(path), dispatcher, { gson.fromJson<Output>(it, type) })
+    constructor(serializer: KSerializer<Output>, request: Request, dispatcher: Dispatcher) :
+            this(serializer, Similar.defaultJson, request, dispatcher)
 
-    constructor(type: Type, path: String, dispatcher: Dispatcher) :
-            this(type, path, Similar.defaultGson, dispatcher)
+    constructor(serializer: KSerializer<Output>, json: Json, path: String, dispatcher: Dispatcher) :
+            this(serializer, json, Request(path), dispatcher)
 
-    constructor(type: KClass<Output>, path: String, gson: Gson, dispatcher: Dispatcher) :
-            this(type.java, path, gson, dispatcher)
+    constructor(serializer: KSerializer<Output>, path: String, dispatcher: Dispatcher) :
+            this(serializer, Similar.defaultJson, Request(path), dispatcher)
 
-    constructor(type: KClass<Output>, path: String, dispatcher: Dispatcher) :
-            this(type, path, Similar.defaultGson, dispatcher)
 
-    constructor(type: Type, request: Request, gson: Gson, dispatcher: Dispatcher) :
+    constructor(type: Type, gson: Gson, request: Request, dispatcher: Dispatcher) :
             this(request, dispatcher, { gson.fromJson<Output>(it, type) })
 
     constructor(type: Type, request: Request, dispatcher: Dispatcher) :
-            this(type, request, Similar.defaultGson, dispatcher)
+            this(type, Similar.defaultGson, request, dispatcher)
 
-    constructor(type: KClass<Output>, request: Request, gson: Gson , dispatcher: Dispatcher) :
-            this(type.java, request, gson, dispatcher)
+    constructor(type: Type, gson: Gson, path: String, dispatcher: Dispatcher) :
+            this(Request(path), dispatcher, { gson.fromJson<Output>(it, type) })
+
+    constructor(type: Type, path: String, dispatcher: Dispatcher) :
+            this(type, Similar.defaultGson, path, dispatcher)
+
+
+    constructor(type: KClass<Output>, gson: Gson, request: Request, dispatcher: Dispatcher) :
+            this(type.java, gson, request, dispatcher)
 
     constructor(type: KClass<Output>, request: Request, dispatcher: Dispatcher) :
-            this(type, request, Similar.defaultGson, dispatcher)
+            this(type, Similar.defaultGson, request, dispatcher)
+
+    constructor(type: KClass<Output>, gson: Gson, path: String, dispatcher: Dispatcher) :
+            this(type.java, gson, Request(path), dispatcher)
+
+    constructor(type: KClass<Output>, path: String, dispatcher: Dispatcher) :
+            this(type, Similar.defaultGson, Request(path), dispatcher)
+
 
     var data: Output? = null
         set(value) {
