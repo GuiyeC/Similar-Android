@@ -224,21 +224,21 @@ class Task<Output> {
     }
 }
 
-fun <NewOutput: Any> Task<String>.decode(serializer: KSerializer<NewOutput>, json: Json = Similar.defaultJson): Task<NewOutput> {
-    return wrap({ data, task ->
-        val entity = json.decodeFromString(serializer, data)
+fun <NewOutput: Any> Task<Response>.decode(serializer: KSerializer<NewOutput>, json: Json = Similar.defaultJson): Task<NewOutput> {
+    return wrap({ response, task ->
+        val entity = json.decodeFromString(serializer, response.data)
         Log.i("Task Decode", entity.toString())
         task.complete(entity)
     })
 }
 
-fun <NewOutput: Any> Task<String>.decode(targetClass: KClass<NewOutput>, gson: Gson = Similar.defaultGson): Task<NewOutput> {
+fun <NewOutput: Any> Task<Response>.decode(targetClass: KClass<NewOutput>, gson: Gson = Similar.defaultGson): Task<NewOutput> {
     return decode(targetClass.java, gson)
 }
 
-fun <NewOutput: Any> Task<String>.decode(type: Type, gson: Gson = Similar.defaultGson): Task<NewOutput> {
-    return wrap({ data, task ->
-        val entity = gson.fromJson<NewOutput>(data, type)
+fun <NewOutput: Any> Task<Response>.decode(type: Type, gson: Gson = Similar.defaultGson): Task<NewOutput> {
+    return wrap({ response, task ->
+        val entity = gson.fromJson<NewOutput>(response.data, type)
         Log.i("Task Decode", entity.toString())
         task.complete(entity)
     })

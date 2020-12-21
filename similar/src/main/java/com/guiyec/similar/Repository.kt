@@ -72,7 +72,7 @@ open class Repository<Output: Any>(
         }
     var updatedDate: Date? = null
         internal set
-    private var updateTask: Task<String>? = null
+    private var updateTask: Task<Response>? = null
     private var currentTasks: MutableList<Task<Output>> = mutableListOf()
 
     fun fetch(forceUpdate: Boolean = false): Task<Output> {
@@ -96,14 +96,14 @@ open class Repository<Output: Any>(
     private fun updateIfNecessary() {
         if (updateTask != null) return
         updateTask = dispatcher.execute(request)
-            .sink(this::handleData)
+            .sink(this::handleResponse)
             .catch(this::handleError)
             .always { updateTask = null }
     }
 
-    private fun handleData(data: String) {
+    private fun handleResponse(response: Response) {
         try {
-            val parsedData = transformBlock(data)
+            val parsedData = transformBlock(response.data)
             this.data = parsedData
             val currentTasks = this.currentTasks.toList()
             this.currentTasks.clear()

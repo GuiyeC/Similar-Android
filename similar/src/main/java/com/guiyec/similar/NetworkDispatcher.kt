@@ -8,13 +8,12 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import java.io.IOException
 
 open class NetworkDispatcher: Dispatcher {
     private val client = OkHttpClient()
 
-    override fun execute(request: Request): Task<String> {
+    override fun execute(request: Request): Task<Response> {
         val urlBuilder = request.path.toHttpUrlOrNull()?.newBuilder()
         require(urlBuilder != null) { "Invalid url" }
         request.parameters?.forEach {
@@ -27,13 +26,13 @@ open class NetworkDispatcher: Dispatcher {
         }
         requestBuilder.addHeader("Accept", "application/json")
         requestBuilder.setData(request.method, request.data)
-        val task = Task<String>()
+        val task = Task<Response>()
         val okHttpRequest = requestBuilder.build()
         Log.d("NetworkDispatcher", okHttpRequest.toString())
         val call = client.newCall(okHttpRequest)
         task.cancelBlock = { call.cancel() }
         call.enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
+            override fun onResponse(call: Call, response: okhttp3.Response) {
                 val responseBody = response.body?.string()
                 if (response.code !in request.expectedCode) {
                     Log.e("NetworkDispatcher", "Server error: ${response.code}")
@@ -47,7 +46,7 @@ open class NetworkDispatcher: Dispatcher {
                     return
                 }
                 Log.i("NetworkDispatcher", responseBody)
-                task.complete(responseBody)
+                task.complete(Response(responseBody, response))
             }
 
             override fun onFailure(call: Call, e: IOException) {
