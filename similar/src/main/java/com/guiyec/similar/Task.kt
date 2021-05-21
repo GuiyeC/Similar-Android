@@ -11,51 +11,42 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty0
 import kotlin.reflect.KMutableProperty1
 
-class Task<Output> {
-    var isCancelled: Boolean = false
-        private set
-    var cancelBlock: (() -> Unit)? = null
-    private var alwaysBlock: (() -> Unit)? = null
-        set(value) {
-            field = value
-            if (isCancelled) return
-            if (output != null || error != null) {
-                alwaysBlock?.invoke()
-            }
-    }
-    private var output: Output? = null
-        set(value) {
-            if (field != null || error != null || value == null) {
-                throw RuntimeException("Invalid output value")
-            }
-            field = value
-            if (isCancelled) return
-            completionBlock?.invoke(value)
-            alwaysBlock?.invoke()
-        }
-    private var completionBlock: ((Output) -> Unit)? = null
-        set(value) {
-            field = value
-            if (isCancelled) return
-            output?.let { completionBlock?.invoke(it) }
-        }
-    private var error: RequestError? = null
-        set(value) {
-            if (field != null || output != null || value == null) {
-                throw RuntimeException("Invalid output value")
-            }
-            field = value
-            if (isCancelled) return
-            errorBlock?.invoke(value)
-            alwaysBlock?.invoke()
-        }
+enum class TaskState {
+    Alive,
+    Completed,
+    Failed,
+    Cancelled
+}
 
-    private var errorBlock: ((RequestError) -> Unit)? = null
-        set(value) {
-            field = value
-            if (isCancelled) return
-            error?.let { errorBlock?.invoke(it) }
+internal data class TaskBlock<Output>(
+    val outputBlock: ((Output) -> Unit)? = null,
+    val errorBlock: ((RequestError) -> Unit)? = null,
+    val alwaysBlock: (() -> Unit)? = null
+) {
+    fun invoke(output: Output) {
+        if (outputBlock != null) {
+            outputBlock.invoke(output)
+        } else {
+            alwaysBlock?.invoke()
         }
+    }
+
+    fun invoke(error: RequestError) {
+        if (errorBlock != null) {
+            errorBlock.invoke(error)
+        } else {
+            alwaysBlock?.invoke()
+        }
+    }
+}
+
+class Task<Output> {
+    var state: TaskState = TaskState.Alive
+        private set
+    private var output: Output? = null
+    private var error: RequestError? = null
+    internal val blocks: MutableList<TaskBlock<Output>> = mutableListOf()
+    var cancelBlock: (() -> Unit)? = null
 
     constructor()
 
@@ -68,23 +59,40 @@ class Task<Output> {
     }
 
     fun complete(output: Output) {
+        if (state == TaskState.Cancelled) return
+        if (state != TaskState.Alive) throw RuntimeException("Invalid state: $state")
         this.output = output
+        this.state = TaskState.Completed
+        blocks.forEach { it.invoke(output = output) }
+        clearBlocks()
     }
 
     fun fail(error: RequestError) {
+        if (state == TaskState.Cancelled) return
+        if (state != TaskState.Alive) throw RuntimeException("Invalid state: $state")
         this.error = error
+        this.state = TaskState.Failed
+        blocks.forEach { it.invoke(error = error) }
+        clearBlocks()
+    }
+
+    internal fun clearBlocks() {
+        blocks.clear()
+        cancelBlock = null
     }
 
     fun sink(block: ((Output) -> Unit)): Task<Output> = sink(null, block)
 
     fun sink(looper: Looper?, block: ((Output) -> Unit)): Task<Output> {
-        val previousSinkBlock = completionBlock
-        val newBlock = if (looper == null) block else { output ->
+        if (state != TaskState.Alive || state != TaskState.Completed) return this
+        val newBlock: ((Output) -> Unit) = if (looper == null) block else { output ->
             Handler(looper).post { block.invoke(output) }
         }
-        completionBlock = {
-            previousSinkBlock?.invoke(it)
-            newBlock(it)
+        val output = output
+        if (output != null) {
+            newBlock.invoke(output)
+        } else {
+            blocks.add(TaskBlock(outputBlock = newBlock))
         }
         return this
     }
@@ -92,13 +100,15 @@ class Task<Output> {
     fun catch(block: ((RequestError) -> Unit)): Task<Output> = catch(null, block)
 
     fun catch(looper: Looper?, block: ((RequestError) -> Unit)): Task<Output> {
-        val previousErrorBlock = errorBlock
-        val newBlock = if (looper == null) block else { error ->
+        if (state != TaskState.Alive || state != TaskState.Failed) return this
+        val newBlock: ((RequestError) -> Unit) = if (looper == null) block else { error ->
             Handler(looper).post { block.invoke(error) }
         }
-        errorBlock = {
-            previousErrorBlock?.invoke(it)
-            newBlock(it)
+        val error = error
+        if (error != null) {
+            newBlock.invoke(error)
+        } else {
+            blocks.add(TaskBlock(errorBlock = newBlock))
         }
         return this
     }
@@ -106,21 +116,26 @@ class Task<Output> {
     fun always(block: (() -> Unit)): Task<Output> = always(null, block)
 
     fun always(looper: Looper?, block: (() -> Unit)): Task<Output> {
-        val previousAlwaysBlock = this.alwaysBlock
-        val newBlock = if (looper == null) block else { ->
-            Handler(looper).post(block)
+        if (state == TaskState.Cancelled) return this
+        val newBlock: (() -> Unit) = if (looper == null) { block } else {
+            { Handler(looper).post(block) }
         }
-        this.alwaysBlock = {
-            previousAlwaysBlock?.invoke()
-            newBlock()
+        if (output != null || error != null) {
+            newBlock.invoke()
+        } else {
+            blocks.add(TaskBlock(alwaysBlock = newBlock))
         }
         return this
     }
 
     fun cancel() {
-        if (isCancelled) return
-        isCancelled = true
+        if (state != TaskState.Alive) {
+            Log.i("Task", "Task could not be cancelled, task state: $state)")
+            return
+        }
+        state = TaskState.Cancelled
         cancelBlock?.invoke()
+        clearBlocks()
     }
 
     fun <T> wrap(sinkBlock: ((Output, Task<T>) -> Unit),
@@ -224,9 +239,15 @@ class Task<Output> {
     }
 }
 
+fun <Output: Any> Task<Output?>.ignoreNull(): Task<Output> {
+    return wrap(sinkBlock = { output, task ->
+        output?.let { task.complete(it) }
+    })
+}
+
 fun <NewOutput: Any> Task<Response>.decode(serializer: KSerializer<NewOutput>, json: Json = Similar.defaultJson): Task<NewOutput> {
     return wrap({ response, task ->
-        val entity = json.decodeFromString(serializer, response.data)
+        val entity = json.decodeFromString(serializer, response.data.string)
         Log.i("Task Decode", entity.toString())
         task.complete(entity)
     })
@@ -238,7 +259,7 @@ fun <NewOutput: Any> Task<Response>.decode(targetClass: KClass<NewOutput>, gson:
 
 fun <NewOutput: Any> Task<Response>.decode(type: Type, gson: Gson = Similar.defaultGson): Task<NewOutput> {
     return wrap({ response, task ->
-        val entity = gson.fromJson<NewOutput>(response.data, type)
+        val entity = gson.fromJson<NewOutput>(response.data.string, type)
         Log.i("Task Decode", entity.toString())
         task.complete(entity)
     })

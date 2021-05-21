@@ -24,10 +24,10 @@ fun <T: Any> KSerializer<T>.list(): KSerializer<List<T>> {
 open class Repository<Output: Any>(
     val request: Request,
     var dispatcher: Dispatcher,
-    private var transformBlock: ((String) -> Output)
+    private var transformBlock: ((Response.Data) -> Output)
 ) {
     constructor(serializer: KSerializer<Output>, json: Json, request: Request, dispatcher: Dispatcher) :
-            this(request, dispatcher, { json.decodeFromString(serializer, it) })
+            this(request, dispatcher, { json.decodeFromString(serializer, it.string) })
 
     constructor(serializer: KSerializer<Output>, request: Request, dispatcher: Dispatcher) :
             this(serializer, Similar.defaultJson, request, dispatcher)
@@ -40,13 +40,13 @@ open class Repository<Output: Any>(
 
 
     constructor(type: Type, gson: Gson, request: Request, dispatcher: Dispatcher) :
-            this(request, dispatcher, { gson.fromJson<Output>(it, type) })
+            this(request, dispatcher, { gson.fromJson<Output>(it.string, type) })
 
     constructor(type: Type, request: Request, dispatcher: Dispatcher) :
             this(type, Similar.defaultGson, request, dispatcher)
 
     constructor(type: Type, gson: Gson, path: String, dispatcher: Dispatcher) :
-            this(Request(path), dispatcher, { gson.fromJson<Output>(it, type) })
+            this(Request(path), dispatcher, { gson.fromJson<Output>(it.string, type) })
 
     constructor(type: Type, path: String, dispatcher: Dispatcher) :
             this(type, Similar.defaultGson, path, dispatcher)

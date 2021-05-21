@@ -1,12 +1,9 @@
 package com.guiyec.similar
 
 import android.util.Log
-import okhttp3.Call
-import okhttp3.Callback
+import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
@@ -33,20 +30,19 @@ open class NetworkDispatcher: Dispatcher {
         task.cancelBlock = { call.cancel() }
         call.enqueue(object : Callback {
             override fun onResponse(call: Call, response: okhttp3.Response) {
-                val responseBody = response.body?.string()
                 if (response.code !in request.expectedCode) {
+                    val responseBody = response.body?.string()
                     Log.e("NetworkDispatcher", "Server error: ${response.code}")
-                    Log.e("NetworkDispatcher", "Server error: $responseBody")
+                    Log.e("NetworkDispatcher", "Server error body: $responseBody")
                     task.fail(RequestError.ServerError(response.code, responseBody))
                     return
                 }
-                if (responseBody == null) {
+                if (response.body?.contentLength() == null) {
                     Log.e("NetworkDispatcher", "Empty data")
                     task.fail(RequestError.NoData)
                     return
                 }
-                Log.i("NetworkDispatcher", responseBody)
-                task.complete(Response(responseBody, response))
+                task.complete(Response(response))
             }
 
             override fun onFailure(call: Call, e: IOException) {
