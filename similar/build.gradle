@@ -1,26 +1,7 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlinx-serialization'
-
-ext {
-    bintrayRepo = 'Similar-Android'
-    bintrayName = 'com.guiyec.similar'
-    publishedGroupId = 'com.guiyec.similar'
-    libraryName = 'similar'
-    artifact = 'similar'
-    libraryVersion = '0.6.0'
-    libraryDescription = 'Android networking library that allows having similar code in multiplatform apps.'
-    siteUrl = 'https://github.com/guiyec/Similar-Android'
-    gitUrl = 'https://github.com/guiyec/Similar-Android.git'
-
-    developerId = 'guiyec'
-    developerName = 'Guillermo Cique'
-    developerEmail = 'guiyec@gmail.com'
-
-    licenseName = 'MIT'
-    licenseUrl = 'https://opensource.org/licenses/mit-license.php'
-    allLicenses = ["MIT"]
-}
+apply plugin: 'com.vanniktech.maven.publish'
 
 android {
     compileSdkVersion 30
@@ -30,14 +11,6 @@ android {
         targetSdkVersion 30
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles "consumer-rules.pro"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
     }
 }
 
@@ -54,16 +27,4 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-
-}
-
-apply from: 'publish.gradle'
-kotlin {
-    targets {
-        configure([]) {
-            tasks.getByName(compilations.main.compileKotlinTaskName).kotlinOptions {
-                languageVersion = "1.4"
-            }
-        }
-    }
 }
