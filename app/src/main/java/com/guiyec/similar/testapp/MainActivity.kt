@@ -48,17 +48,35 @@ class MainActivity : AppCompatActivity() {
         Log.d("MainAc", "JSON2: ${Json.encodeToString(LoginRequest2(password = "cityslicka"))}")
 
         val request = Request("https://reqres.in/api/login", method = HttpMethod.Post, parameters = mapOf(Pair("page", "2"), Pair("page_size", "2c"), Pair("page", "B")), data = Request.Data.Json(LoginRequest2(password = "cityslicka"), LoginRequest2.serializer()))
-        dispatcher.execute(request)
-            .decode(SuccessResponse.serializer())
-            .print()
-            .sink(Looper.getMainLooper()) {
-                findViewById<TextView>(R.id.textView).text = it.token
-            }
-            .catch(ErrorResponse::class) { code, error ->
-                print("Code: $code")
-                print("$error")
-            }
+//        val file = assets.open("large-file.json")
+//        val request = Request("https://reqres.in/api/login", method = HttpMethod.Post, parameters = mapOf(Pair("page", "2"), Pair("page_size", "2c"), Pair("page", "B")), data = Request.Data.Multipart(
+//            listOf(
+//                Request.DataPart("thins", data = file.readBytes()),
+//                Request.DataPart("thinngcs", data = assets.open("large-file.json").readBytes()),
+//                Request.DataPart("gregre", data = "fewfewfewfewfew"),
+//                Request.DataPart("th4ins", data = assets.open("large-file.json").readBytes())
+//            )))
+//        dispatcher.execute(request)
+//            .progress { Log.d("NetworkDispatcher", "Progress $it") }
+//            .decode(SuccessResponse.serializer())
+//            .print()
+//            .sink(Looper.getMainLooper()) {
+//                findViewById<TextView>(R.id.textView).text = it.token
+//            }
+//            .catch(ErrorResponse::class) { code, error ->
+//                print("Code: $code")
+//                print("$error")
+//            }
+//
+//        repo.sink {  }
 
-        repo.sink {  }
+        dispatcher.execute(Request("http://ipv4.download.thinkbroadband.com/20MB.zip"))
+            .progress { Log.d("NetworkDispatcher", "Progress $it") }
+            .sink {
+                it.data.string
+                Log.d("NetworkDispatcher","Complete")
+            }
+            .catch { Log.d("NetworkDispatcher","Failed") }
+            .print()
     }
 }

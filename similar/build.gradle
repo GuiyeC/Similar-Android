@@ -2,9 +2,11 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlinx-serialization'
 
+// To publish:
+// ./gradlew similar:publishReleasePublicationToSonatypeRepository
 ext {
     PUBLISH_GROUP_ID = 'com.guiyec.similar'
-    PUBLISH_VERSION = '0.6.0'
+    PUBLISH_VERSION = '0.7.0'
     PUBLISH_ARTIFACT_ID = 'similar'
 }
 

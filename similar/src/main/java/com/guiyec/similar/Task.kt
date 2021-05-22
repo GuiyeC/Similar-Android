@@ -6,6 +6,7 @@ import android.util.Log
 import com.google.gson.Gson
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import java.lang.Exception
 import java.lang.reflect.Type
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty0
@@ -45,7 +46,14 @@ class Task<Output> {
         private set
     private var output: Output? = null
     private var error: RequestError? = null
+    var progress: Double? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            value?.let { progressBlock?.invoke(it) }
+        }
     internal val blocks: MutableList<TaskBlock<Output>> = mutableListOf()
+    internal var progressBlock: ((Double) -> Unit)? = null
     var cancelBlock: (() -> Unit)? = null
 
     constructor()
@@ -81,10 +89,29 @@ class Task<Output> {
         cancelBlock = null
     }
 
+    fun progress(block: ((Double) -> Unit)): Task<Output> = progress(null, block)
+
+    fun progress(looper: Looper?, block: ((Double) -> Unit)): Task<Output> {
+        if (state != TaskState.Alive) return this
+        val newBlock: ((Double) -> Unit) = if (looper == null) { block } else {
+            { Handler(looper).post { block.invoke(it) } }
+        }
+        val previousBlock = progressBlock
+        if (previousBlock != null) {
+            progressBlock = {
+                previousBlock.invoke(it)
+                newBlock.invoke(it)
+            }
+        } else {
+            progressBlock = newBlock
+        }
+        return this
+    }
+
     fun sink(block: ((Output) -> Unit)): Task<Output> = sink(null, block)
 
     fun sink(looper: Looper?, block: ((Output) -> Unit)): Task<Output> {
-        if (state != TaskState.Alive || state != TaskState.Completed) return this
+        if (state == TaskState.Failed || state == TaskState.Cancelled) return this
         val newBlock: ((Output) -> Unit) = if (looper == null) block else { output ->
             Handler(looper).post { block.invoke(output) }
         }
@@ -100,7 +127,7 @@ class Task<Output> {
     fun catch(block: ((RequestError) -> Unit)): Task<Output> = catch(null, block)
 
     fun catch(looper: Looper?, block: ((RequestError) -> Unit)): Task<Output> {
-        if (state != TaskState.Alive || state != TaskState.Failed) return this
+        if (state == TaskState.Completed || state == TaskState.Cancelled) return this
         val newBlock: ((RequestError) -> Unit) = if (looper == null) block else { error ->
             Handler(looper).post { block.invoke(error) }
         }
@@ -143,7 +170,9 @@ class Task<Output> {
         val task = Task<T>()
         sink { sinkBlock(it, task) }
         `catch` { catchBlock(it, task) }
-        task.cancelBlock = this::cancel
+        task.cancelBlock = cancelBlock
+        task.progressBlock = progressBlock
+        progressBlock = { task.progress = it }
         return task
     }
 
@@ -211,8 +240,10 @@ class Task<Output> {
     fun <Error: Any> catch(serializer: KSerializer<Error>, json: Json = Similar.defaultJson, block: ((Int, Error) -> Unit)): Task<Output> {
         return catch {
             if (it is RequestError.ServerError && it.data != null) {
-                val decodedError = json.decodeFromString(serializer, it.data)
-                block.invoke(it.code, decodedError)
+                try {
+                    val decodedError = json.decodeFromString(serializer, it.data)
+                    block.invoke(it.code, decodedError)
+                } catch (e: Exception) { e.printStackTrace() }
             }
         }
     }
@@ -232,8 +263,10 @@ class Task<Output> {
     fun <Error: Any> catch(type: Type, gson: Gson = Similar.defaultGson, block: ((Int, Error) -> Unit)): Task<Output> {
         return catch {
             if (it is RequestError.ServerError && it.data != null) {
-                val decodedError = gson.fromJson<Error>(it.data, type)
-                block.invoke(it.code, decodedError)
+                try {
+                    val decodedError = gson.fromJson<Error>(it.data, type)
+                    block.invoke(it.code, decodedError)
+                } catch (e: Exception) { e.printStackTrace() }
             }
         }
     }
