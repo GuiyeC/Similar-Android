@@ -2,11 +2,13 @@ package com.guiyec.similar
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import java.lang.reflect.Type
 import java.util.*
 import kotlin.reflect.KClass
@@ -22,12 +24,17 @@ fun <T: Any> KSerializer<T>.list(): KSerializer<List<T>> {
 }
 
 open class Repository<Output: Any>(
-    val request: Request,
-    var dispatcher: Dispatcher,
+    private var taskBuilder: (() -> Task<Response>?),
     private var transformBlock: ((Response.Data) -> Output)
 ) {
+    constructor(serializer: KSerializer<Output>, json: Json, taskBuilder: (() -> Task<Response>?)) :
+            this(taskBuilder, { json.decodeFromString(serializer, it.string) })
+
+    constructor(serializer: KSerializer<Output>, taskBuilder: (() -> Task<Response>?)) :
+            this(serializer, Similar.defaultJson, taskBuilder)
+
     constructor(serializer: KSerializer<Output>, json: Json, request: Request, dispatcher: Dispatcher) :
-            this(request, dispatcher, { json.decodeFromString(serializer, it.string) })
+            this({ dispatcher.execute(request) }, { json.decodeFromString(serializer, it.string) })
 
     constructor(serializer: KSerializer<Output>, request: Request, dispatcher: Dispatcher) :
             this(serializer, Similar.defaultJson, request, dispatcher)
@@ -40,16 +47,16 @@ open class Repository<Output: Any>(
 
 
     constructor(type: Type, gson: Gson, request: Request, dispatcher: Dispatcher) :
-            this(request, dispatcher, { gson.fromJson<Output>(it.string, type) })
+            this({ dispatcher.execute(request) }, { gson.fromJson<Output>(it.string, type) })
 
     constructor(type: Type, request: Request, dispatcher: Dispatcher) :
             this(type, Similar.defaultGson, request, dispatcher)
 
     constructor(type: Type, gson: Gson, path: String, dispatcher: Dispatcher) :
-            this(Request(path), dispatcher, { gson.fromJson<Output>(it.string, type) })
+            this(type, gson, Request(path), dispatcher)
 
     constructor(type: Type, path: String, dispatcher: Dispatcher) :
-            this(type, Similar.defaultGson, path, dispatcher)
+            this(type, Similar.defaultGson, Request(path), dispatcher)
 
 
     constructor(type: KClass<Output>, gson: Gson, request: Request, dispatcher: Dispatcher) :
@@ -63,7 +70,6 @@ open class Repository<Output: Any>(
 
     constructor(type: KClass<Output>, path: String, dispatcher: Dispatcher) :
             this(type, Similar.defaultGson, Request(path), dispatcher)
-
 
     var data: Output? = null
         set(value) {
@@ -95,7 +101,11 @@ open class Repository<Output: Any>(
 
     private fun updateIfNecessary() {
         if (updateTask != null) return
-        updateTask = dispatcher.execute(request)
+        val task = taskBuilder() ?: run {
+            Log.d("Repository", "Task not available, will not update")
+            return
+        }
+        updateTask = task
             .sink(this::handleResponse)
             .catch(this::handleError)
             .always { updateTask = null }
@@ -120,7 +130,7 @@ open class Repository<Output: Any>(
     }
 
     fun <NewOutput: Any> map(mapBlock: (Output) -> NewOutput): Repository<NewOutput> {
-        return Repository(request, dispatcher) { mapBlock(transformBlock(it)) }
+        return Repository(taskBuilder) { mapBlock(transformBlock(it)) }
     }
 
     fun sink(block: (Output) -> Unit): Repository<Output> = sink(null, block)
@@ -148,5 +158,23 @@ open class Repository<Output: Any>(
 
     fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, looper: Looper?): Repository<Output> {
         return sink(looper) { property.set(instance, it) }
+    }
+
+    companion object {
+        inline fun<reified Output: Any> build(json: Json, request: Request, dispatcher: Dispatcher): Repository<Output> {
+            return Repository(serializer(), json, request, dispatcher)
+        }
+
+        inline fun<reified Output: Any> build(request: Request, dispatcher: Dispatcher): Repository<Output> {
+            return Repository(serializer(), request, dispatcher)
+        }
+
+        inline fun<reified Output: Any> build(json: Json, path: String, dispatcher: Dispatcher): Repository<Output> {
+            return Repository(serializer(), json, Request(path), dispatcher)
+        }
+
+        inline fun<reified Output: Any> build(path: String, dispatcher: Dispatcher): Repository<Output> {
+            return Repository(serializer(), Similar.defaultJson, Request(path), dispatcher)
+        }
     }
 }
