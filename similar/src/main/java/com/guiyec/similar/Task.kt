@@ -239,9 +239,9 @@ class Task<Output> {
 
     fun <Error: Any> catch(serializer: KSerializer<Error>, json: Json = Similar.defaultJson, block: ((Int, Error) -> Unit)): Task<Output> {
         return catch {
-            if (it is RequestError.ServerError && it.data != null) {
+            if (it is RequestError.ServerError && !it.response.data.isEmpty()) {
                 try {
-                    val decodedError = json.decodeFromString(serializer, it.data)
+                    val decodedError = json.decodeFromString(serializer, it.response.data.string)
                     block.invoke(it.code, decodedError)
                 } catch (e: Exception) { e.printStackTrace() }
             }
@@ -262,9 +262,9 @@ class Task<Output> {
 
     fun <Error: Any> catch(type: Type, gson: Gson = Similar.defaultGson, block: ((Int, Error) -> Unit)): Task<Output> {
         return catch {
-            if (it is RequestError.ServerError && it.data != null) {
+            if (it is RequestError.ServerError && !it.response.data.isEmpty()) {
                 try {
-                    val decodedError = gson.fromJson<Error>(it.data, type)
+                    val decodedError = gson.fromJson<Error>(it.response.data.string, type)
                     block.invoke(it.code, decodedError)
                 } catch (e: Exception) { e.printStackTrace() }
             }

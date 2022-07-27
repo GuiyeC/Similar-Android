@@ -12,6 +12,8 @@ data class Response(
         val inputStream: InputStream
         val bytes: ByteArray
         val string: String
+
+        fun isEmpty(): Boolean
     }
 
     constructor(response: okhttp3.Response) :
@@ -33,10 +35,14 @@ data class ResponseData(override val bytes: ByteArray): Response.Data {
     override fun hashCode(): Int {
         return bytes.contentHashCode()
     }
+
+    override fun isEmpty(): Boolean = bytes.isEmpty()
 }
 
 data class OkhttpData(private val response: okhttp3.Response): Response.Data {
     override val inputStream: InputStream get() = response.body!!.byteStream()
-    override val bytes: ByteArray get() = response.body!!.bytes()
-    override val string: String get() = response.body!!.string()
+    override val bytes: ByteArray get() = response.body?.bytes() ?: byteArrayOf()
+    override val string: String get() = response.body?.string() ?: ""
+
+    override fun isEmpty(): Boolean = string.isEmpty()
 }

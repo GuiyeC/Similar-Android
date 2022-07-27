@@ -57,7 +57,12 @@ open class NetworkDispatcher: Dispatcher {
                     val responseBody = response.body?.string()
                     Log.e("NetworkDispatcher", "Server error: ${response.code}")
                     Log.e("NetworkDispatcher", "Server error body: $responseBody")
-                    task.fail(RequestError.ServerError(response.code, responseBody))
+                    val similarResponse: Response = if (responseBody == null) Response(
+                        data = ResponseData(byteArrayOf()),
+                        statusCode = response.code,
+                        headers = response.headers.toMap()
+                    ) else Response(response)
+                    task.fail(RequestError.ServerError(response.code, similarResponse))
                     return
                 }
                 if (response.body?.contentLength() == null) {
