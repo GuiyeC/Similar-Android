@@ -2,6 +2,7 @@ package com.guiyec.similar
 
 import com.google.gson.Gson
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.serializer
 import kotlinx.serialization.json.Json as KotlinJson
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
@@ -22,11 +23,20 @@ data class Request(
         data class Json<T: Any>(val jsonBlock: () -> String): Data() {
             constructor(jsonString: String) : this({ jsonString })
             constructor(data: T, gson: Gson = Similar.defaultGson) : this({ gson.toJson(data) })
-            constructor(data: T, serializer: KSerializer<T>) : this({ KotlinJson.encodeToString(serializer, data) })
+            constructor(
+                data: T, serializer: KSerializer<T>,
+                json: KotlinJson = Similar.defaultJson
+            ) : this({ json.encodeToString(serializer, data) })
 
             val jsonString: String get() = jsonBlock()
         }
         data class Multipart(val parts: List<DataPart>): Data()
+
+        companion object {
+            inline fun <reified T: Any>json(data: T): Json<T> {
+                return Json(data = data, serializer = serializer())
+            }
+        }
     }
 
     data class DataPart internal constructor(val name: String, val fileName: String? = null, val data: RequestBody) {
