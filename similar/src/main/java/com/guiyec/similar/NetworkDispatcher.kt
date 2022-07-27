@@ -47,7 +47,6 @@ open class NetworkDispatcher: Dispatcher {
         if (request.data !is Request.Data.Multipart) {
             tasks[okHttpRequest] = task
         }
-        Log.d("NetworkDispatcher", okHttpRequest.toString())
         val call = client.newCall(okHttpRequest)
         task.cancelBlock = { call.cancel() }
         call.enqueue(object : Callback {
@@ -55,8 +54,6 @@ open class NetworkDispatcher: Dispatcher {
                 tasks.remove(okHttpRequest)
                 if (response.code !in request.expectedCode) {
                     val responseBody = response.body?.string()
-                    Log.e("NetworkDispatcher", "Server error: ${response.code}")
-                    Log.e("NetworkDispatcher", "Server error body: $responseBody")
                     val similarResponse: Response = if (responseBody == null) Response(
                         data = ResponseData(byteArrayOf()),
                         statusCode = response.code,
@@ -66,7 +63,6 @@ open class NetworkDispatcher: Dispatcher {
                     return
                 }
                 if (response.body?.contentLength() == null) {
-                    Log.e("NetworkDispatcher", "Empty data")
                     task.fail(RequestError.NoData)
                     return
                 }
@@ -87,7 +83,6 @@ fun okhttp3.Request.Builder.setData(method: HttpMethod, data: Request.Data?, tas
     when (data) {
         is Request.Data.Json<*> -> {
             val jsonBody = data.jsonString
-            Log.i("NetworkDispatcher", jsonBody)
             val body = jsonBody.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
             method(method.value, body)
             addHeader("Content-Type", "application/json")

@@ -281,7 +281,6 @@ fun <Output: Any> Task<Output?>.ignoreNull(): Task<Output> {
 fun <NewOutput: Any> Task<Response>.decode(serializer: KSerializer<NewOutput>, json: Json = Similar.defaultJson): Task<NewOutput> {
     return wrap({ response, task ->
         val entity = json.decodeFromString(serializer, response.data.string)
-        Log.i("Task Decode", entity.toString())
         task.complete(entity)
     })
 }
@@ -293,7 +292,6 @@ fun <NewOutput: Any> Task<Response>.decode(targetClass: KClass<NewOutput>, gson:
 fun <NewOutput: Any> Task<Response>.decode(type: Type, gson: Gson = Similar.defaultGson): Task<NewOutput> {
     return wrap({ response, task ->
         val entity = gson.fromJson<NewOutput>(response.data.string, type)
-        Log.i("Task Decode", entity.toString())
         task.complete(entity)
     })
 }
