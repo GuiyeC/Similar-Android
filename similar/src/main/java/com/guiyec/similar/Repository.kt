@@ -23,10 +23,17 @@ fun <T: Any> KSerializer<T>.list(): KSerializer<List<T>> {
     return ListSerializer(this)
 }
 
-open class Repository<Output: Any>(
+open class Repository<Output: Any?>(
     private var taskBuilder: (() -> Task<Response>?),
     private var transformBlock: ((Response.Data) -> Output)
 ) {
+    constructor(request: Request, dispatcher: Dispatcher, transformBlock: ((Response.Data) -> Output)) :
+            this({ dispatcher.execute(request) }, transformBlock)
+
+    constructor(path: String, dispatcher: Dispatcher, transformBlock: ((Response.Data) -> Output)) :
+            this(Request(path), dispatcher, transformBlock)
+
+
     constructor(serializer: KSerializer<Output>, json: Json, taskBuilder: (() -> Task<Response>?)) :
             this(taskBuilder, { json.decodeFromString(serializer, it.string) })
 
@@ -58,18 +65,6 @@ open class Repository<Output: Any>(
     constructor(type: Type, path: String, dispatcher: Dispatcher) :
             this(type, Similar.defaultGson, Request(path), dispatcher)
 
-
-    constructor(type: KClass<Output>, gson: Gson, request: Request, dispatcher: Dispatcher) :
-            this(type.java, gson, request, dispatcher)
-
-    constructor(type: KClass<Output>, request: Request, dispatcher: Dispatcher) :
-            this(type, Similar.defaultGson, request, dispatcher)
-
-    constructor(type: KClass<Output>, gson: Gson, path: String, dispatcher: Dispatcher) :
-            this(type.java, gson, Request(path), dispatcher)
-
-    constructor(type: KClass<Output>, path: String, dispatcher: Dispatcher) :
-            this(type, Similar.defaultGson, Request(path), dispatcher)
 
     var data: Output? = null
         set(value) {
@@ -161,19 +156,19 @@ open class Repository<Output: Any>(
     }
 
     companion object {
-        inline fun<reified Output: Any> build(json: Json, request: Request, dispatcher: Dispatcher): Repository<Output> {
+        inline fun<reified Output: Any?> build(json: Json, request: Request, dispatcher: Dispatcher): Repository<Output> {
             return Repository(serializer(), json, request, dispatcher)
         }
 
-        inline fun<reified Output: Any> build(request: Request, dispatcher: Dispatcher): Repository<Output> {
+        inline fun<reified Output: Any?> build(request: Request, dispatcher: Dispatcher): Repository<Output> {
             return Repository(serializer(), request, dispatcher)
         }
 
-        inline fun<reified Output: Any> build(json: Json, path: String, dispatcher: Dispatcher): Repository<Output> {
+        inline fun<reified Output: Any?> build(json: Json, path: String, dispatcher: Dispatcher): Repository<Output> {
             return Repository(serializer(), json, Request(path), dispatcher)
         }
 
-        inline fun<reified Output: Any> build(path: String, dispatcher: Dispatcher): Repository<Output> {
+        inline fun<reified Output: Any?> build(path: String, dispatcher: Dispatcher): Repository<Output> {
             return Repository(serializer(), Similar.defaultJson, Request(path), dispatcher)
         }
     }
