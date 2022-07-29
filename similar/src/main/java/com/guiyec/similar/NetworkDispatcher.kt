@@ -15,7 +15,7 @@ import kotlin.math.min
 
 open class NetworkDispatcher: Dispatcher {
     private var tasks: MutableMap<okhttp3.Request, Task<Response>> = mutableMapOf()
-    private val client: OkHttpClient = OkHttpClient.Builder()
+    open val clientBuilder: OkHttpClient.Builder = OkHttpClient.Builder()
         .addNetworkInterceptor(Interceptor { chain: Interceptor.Chain ->
             val task = tasks.remove(chain.call().request())
             val originalResponse = chain.proceed(chain.request())
@@ -27,7 +27,7 @@ open class NetworkDispatcher: Dispatcher {
                     .body(ProgressResponseBody(responseBody, task))
                     .build()
         })
-        .build()
+    private val client: OkHttpClient by lazy { clientBuilder.build() }
 
     override fun execute(request: Request): Task<Response> {
         val urlBuilder = request.path.toHttpUrlOrNull()?.newBuilder()
