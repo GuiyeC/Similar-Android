@@ -5,6 +5,8 @@ import android.os.Looper
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -128,32 +130,45 @@ open class Repository<Output: Any?>(
         return Repository(taskBuilder) { mapBlock(transformBlock(it)) }
     }
 
-    fun sink(block: (Output) -> Unit): Repository<Output> = sink(null, block)
-
-    fun sink(looper: Looper?, block: (Output) -> Unit): Repository<Output> {
+    fun sink(block: (Output) -> Unit): Repository<Output> {
         val previousTransformBlock = transformBlock
-        val newBlock = if (looper == null) block else { output ->
-            Handler(looper).post { block.invoke(output) }
-        }
         transformBlock = {
             val output = previousTransformBlock(it)
-            newBlock(output)
+            block(output)
             output
         }
         return this
     }
 
-    fun assign(property: KMutableProperty0<Output>): Repository<Output> = assign(property, null)
-
-    fun assign(property: KMutableProperty0<Output>, looper: Looper?): Repository<Output> {
-        return sink(looper) { property.set(it) }
+    fun sink(looper: Looper, block: (Output) -> Unit): Repository<Output> {
+        return sink { output ->
+            Handler(looper).post { block.invoke(output) }
+        }
     }
 
-    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root): Repository<Output> = assign(property, instance, null)
-
-    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, looper: Looper?): Repository<Output> {
-        return sink(looper) { property.set(instance, it) }
+    fun sink(scope: CoroutineScope, block: (Output) -> Unit): Repository<Output> {
+        return sink { output ->
+            scope.launch { block.invoke(output) }
+        }
     }
+
+    fun assign(property: KMutableProperty0<Output>) =
+        sink { property.set(it) }
+
+    fun assign(property: KMutableProperty0<Output>, looper: Looper) =
+        sink(looper) { property.set(it) }
+
+    fun assign(property: KMutableProperty0<Output>, scope: CoroutineScope) =
+        sink(scope) { property.set(it) }
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root) =
+        sink { property.set(instance, it) }
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, looper: Looper) =
+        sink(looper) { property.set(instance, it) }
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, scope: CoroutineScope) =
+        sink(scope) { property.set(instance, it) }
 
     companion object {
         inline fun<reified Output: Any?> build(json: Json, request: Request, dispatcher: Dispatcher): Repository<Output> {

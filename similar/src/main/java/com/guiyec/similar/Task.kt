@@ -4,6 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import java.lang.Exception
@@ -108,51 +110,78 @@ class Task<Output> {
         return this
     }
 
-    fun sink(block: ((Output) -> Unit)): Task<Output> = sink(null, block)
+    // Sink
 
-    fun sink(looper: Looper?, block: ((Output) -> Unit)): Task<Output> {
+    fun sink(block: ((Output) -> Unit)): Task<Output> {
         if (state == TaskState.Failed || state == TaskState.Cancelled) return this
-        val newBlock: ((Output) -> Unit) = if (looper == null) block else { output ->
-            Handler(looper).post { block.invoke(output) }
-        }
         val output = output
         if (output != null) {
-            newBlock.invoke(output)
+            block.invoke(output)
         } else {
-            blocks.add(TaskBlock(outputBlock = newBlock))
+            blocks.add(TaskBlock(outputBlock = block))
         }
         return this
     }
 
-    fun catch(block: ((RequestError) -> Unit)): Task<Output> = catch(null, block)
-
-    fun catch(looper: Looper?, block: ((RequestError) -> Unit)): Task<Output> {
-        if (state == TaskState.Completed || state == TaskState.Cancelled) return this
-        val newBlock: ((RequestError) -> Unit) = if (looper == null) block else { error ->
-            Handler(looper).post { block.invoke(error) }
+    fun sink(looper: Looper, block: ((Output) -> Unit)): Task<Output> {
+        return sink { output ->
+            Handler(looper).post { block.invoke(output) }
         }
+    }
+
+    fun sink(scope: CoroutineScope, block: ((Output) -> Unit)): Task<Output> {
+        return sink { output ->
+            scope.launch { block.invoke(output) }
+        }
+    }
+
+    // Catch
+
+    fun catch(block: ((RequestError) -> Unit)): Task<Output> {
+        if (state == TaskState.Completed || state == TaskState.Cancelled) return this
         val error = error
         if (error != null) {
-            newBlock.invoke(error)
+            block.invoke(error)
         } else {
-            blocks.add(TaskBlock(errorBlock = newBlock))
+            blocks.add(TaskBlock(errorBlock = block))
         }
         return this
     }
 
-    fun always(block: (() -> Unit)): Task<Output> = always(null, block)
-
-    fun always(looper: Looper?, block: (() -> Unit)): Task<Output> {
-        if (state == TaskState.Cancelled) return this
-        val newBlock: (() -> Unit) = if (looper == null) { block } else {
-            { Handler(looper).post(block) }
+    fun catch(looper: Looper, block: ((RequestError) -> Unit)): Task<Output> {
+        return catch { error ->
+            Handler(looper).post { block.invoke(error) }
         }
+    }
+
+    fun catch(scope: CoroutineScope, block: ((RequestError) -> Unit)): Task<Output> {
+        return catch { error ->
+            scope.launch { block.invoke(error) }
+        }
+    }
+
+    // Always
+
+    fun always(block: (() -> Unit)): Task<Output> {
+        if (state == TaskState.Cancelled) return this
         if (output != null || error != null) {
-            newBlock.invoke()
+            block.invoke()
         } else {
-            blocks.add(TaskBlock(alwaysBlock = newBlock))
+            blocks.add(TaskBlock(alwaysBlock = block))
         }
         return this
+    }
+
+    fun always(looper: Looper, block: (() -> Unit)): Task<Output> {
+        return always {
+            Handler(looper).post(block)
+        }
+    }
+
+    fun always(scope: CoroutineScope, block: (() -> Unit)): Task<Output> {
+        return always {
+            scope.launch { block() }
+        }
     }
 
     fun cancel() {
@@ -195,17 +224,23 @@ class Task<Output> {
         return guard(guardBlock, { error })
     }
 
-    fun assign(property: KMutableProperty0<Output>): Task<Output> = assign(property, null)
+    fun assign(property: KMutableProperty0<Output>) =
+        sink { property.set(it) }
 
-    fun assign(property: KMutableProperty0<Output>, looper: Looper?): Task<Output> {
-        return sink(looper) { property.set(it) }
-    }
+    fun assign(property: KMutableProperty0<Output>, looper: Looper) =
+        sink(looper) { property.set(it) }
 
-    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root): Task<Output> = assign(property, instance, null)
+    fun assign(property: KMutableProperty0<Output>, scope: CoroutineScope) =
+        sink(scope) { property.set(it) }
 
-    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, looper: Looper?): Task<Output> {
-        return sink(looper) { property.set(instance, it) }
-    }
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root) =
+        sink { property.set(instance, it) }
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, looper: Looper) =
+        sink(looper) { property.set(instance, it) }
+
+    fun <Root> assign(property: KMutableProperty1<Root, Output>, instance: Root, scope: CoroutineScope) =
+        sink(scope) { property.set(instance, it) }
 
     fun <NewOutput> then(taskBlock: (Output) -> Task<NewOutput>): Task<NewOutput> {
         return wrap({ data, task ->
