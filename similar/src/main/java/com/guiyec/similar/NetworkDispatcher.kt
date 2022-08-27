@@ -53,12 +53,12 @@ open class NetworkDispatcher: Dispatcher {
             override fun onResponse(call: Call, response: okhttp3.Response) {
                 tasks.remove(okHttpRequest)
                 if (response.code !in request.expectedCode) {
-                    val responseBody = response.body?.string()
-                    val similarResponse: Response = if (responseBody == null) Response(
-                        data = ResponseData(byteArrayOf()),
+                    val responseBody = response.body?.bytes() ?: byteArrayOf()
+                    val similarResponse = Response(
+                        data = ResponseData(responseBody),
                         statusCode = response.code,
                         headers = response.headers.toMap()
-                    ) else Response(response)
+                    )
                     task.fail(RequestError.ServerError(response.code, similarResponse))
                     return
                 }
