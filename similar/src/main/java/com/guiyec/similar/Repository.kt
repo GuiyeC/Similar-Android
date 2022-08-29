@@ -146,7 +146,7 @@ open class Repository<Output: Any?>(
         }
     }
 
-    fun sink(scope: CoroutineScope, block: (Output) -> Unit): Repository<Output> {
+    fun sink(scope: CoroutineScope, block: suspend (Output) -> Unit): Repository<Output> {
         return sink { output ->
             scope.launch { block.invoke(output) }
         }

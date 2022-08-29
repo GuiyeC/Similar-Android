@@ -129,7 +129,7 @@ class Task<Output> {
         }
     }
 
-    fun sink(scope: CoroutineScope, block: ((Output) -> Unit)): Task<Output> {
+    fun sink(scope: CoroutineScope, block: suspend ((Output) -> Unit)): Task<Output> {
         return sink { output ->
             scope.launch { block.invoke(output) }
         }
@@ -154,7 +154,7 @@ class Task<Output> {
         }
     }
 
-    fun catch(scope: CoroutineScope, block: ((RequestError) -> Unit)): Task<Output> {
+    fun catch(scope: CoroutineScope, block: suspend ((RequestError) -> Unit)): Task<Output> {
         return catch { error ->
             scope.launch { block.invoke(error) }
         }
@@ -178,7 +178,7 @@ class Task<Output> {
         }
     }
 
-    fun always(scope: CoroutineScope, block: (() -> Unit)): Task<Output> {
+    fun always(scope: CoroutineScope, block: suspend (() -> Unit)): Task<Output> {
         return always {
             scope.launch { block() }
         }
