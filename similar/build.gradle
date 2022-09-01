@@ -6,7 +6,7 @@ apply plugin: 'kotlinx-serialization'
 // ./gradlew similar:publishReleasePublicationToSonatypeRepository
 ext {
     PUBLISH_GROUP_ID = 'com.guiyec.similar'
-    PUBLISH_VERSION = '0.9.3'
+    PUBLISH_VERSION = '0.9.4'
     PUBLISH_ARTIFACT_ID = 'similar'
 }
 
