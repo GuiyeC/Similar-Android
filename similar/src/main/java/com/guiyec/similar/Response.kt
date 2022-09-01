@@ -41,8 +41,24 @@ data class ResponseData(override val bytes: ByteArray): Response.Data {
 
 data class OkhttpData(private val response: okhttp3.Response): Response.Data {
     override val inputStream: InputStream get() = response.body!!.byteStream()
-    override val bytes: ByteArray get() = response.body?.bytes() ?: byteArrayOf()
-    override val string: String get() = response.body?.string() ?: ""
+    private var _bytes: ByteArray? = null
+    override val bytes: ByteArray
+        get() {
+            _bytes?.let { return it }
+            _string?.let { return it.toByteArray(Charsets.UTF_8) }
+            val bytes = response.body?.bytes() ?: byteArrayOf()
+            _bytes = bytes
+            return bytes
+        }
+    private var _string: String? = null
+    override val string: String
+        get() {
+            _string?.let { return it }
+            _bytes?.let { return bytes.toString(Charsets.UTF_8) }
+            val string = response.body?.string() ?: ""
+            _string = string
+            return string
+        }
 
     override fun isEmpty(): Boolean = string.isEmpty()
 }
