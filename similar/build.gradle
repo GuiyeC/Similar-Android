@@ -6,18 +6,18 @@ apply plugin: 'kotlinx-serialization'
 // ./gradlew similar:publishReleasePublicationToSonatypeRepository
 ext {
     PUBLISH_GROUP_ID = 'com.guiyec.similar'
-    PUBLISH_VERSION = '0.9.4'
+    PUBLISH_VERSION = '0.9.5'
     PUBLISH_ARTIFACT_ID = 'similar'
 }
 
 apply from: "${rootDir}/scripts/publish-module.gradle"
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 33
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 32
+        targetSdkVersion 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,7 +33,7 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'androidx.core:core-ktx:1.8.0'
+    implementation 'androidx.core:core-ktx:1.9.0'
     api "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
     api 'com.google.code.gson:gson:2.8.9'
