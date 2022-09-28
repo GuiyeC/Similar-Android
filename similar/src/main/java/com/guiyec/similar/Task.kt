@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.serializer
 import java.lang.Exception
 import java.lang.reflect.Type
 import kotlin.reflect.KClass
@@ -311,6 +312,10 @@ fun <Output: Any> Task<Output?>.ignoreNull(): Task<Output> {
     return wrap(sinkBlock = { output, task ->
         output?.let { task.complete(it) }
     })
+}
+
+inline fun <reified NewOutput: Any> Task<Response>.decode(json: Json = Similar.defaultJson): Task<NewOutput> {
+    return decode(serializer(), json = json)
 }
 
 fun <NewOutput: Any> Task<Response>.decode(serializer: KSerializer<NewOutput>, json: Json = Similar.defaultJson): Task<NewOutput> {
