@@ -11,6 +11,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import java.lang.Exception
 import java.lang.reflect.Type
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty0
 import kotlin.reflect.KMutableProperty1
@@ -344,3 +347,14 @@ fun <NewOutput: Any> Task<Response>.decode(type: Type, gson: Gson = Similar.defa
     })
 }
 
+suspend fun <T> Task<T>.await(): Result<T> {
+    return try {
+        val result = suspendCoroutine { continuation ->
+            sink { continuation.resume(it) }
+            catch { continuation.resumeWithException(it) }
+        }
+        Result.success(result)
+    } catch (error: RequestError) {
+        Result.failure(error)
+    }
+}
