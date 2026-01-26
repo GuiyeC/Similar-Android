@@ -1,6 +1,5 @@
 package com.guiyec.similar
 
-import android.util.Log
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -20,7 +19,7 @@ open class NetworkDispatcher: Dispatcher {
             val task = tasks.remove(chain.call().request())
             val originalResponse = chain.proceed(chain.request())
             val responseBody = originalResponse.body
-            if (task == null || responseBody == null)
+            if (task == null)
                 originalResponse
             else
                 originalResponse.newBuilder()
@@ -53,7 +52,7 @@ open class NetworkDispatcher: Dispatcher {
             override fun onResponse(call: Call, response: okhttp3.Response) {
                 tasks.remove(okHttpRequest)
                 if (response.code !in request.expectedCode) {
-                    val responseBody = response.body?.bytes() ?: byteArrayOf()
+                    val responseBody = response.body.bytes()
                     val similarResponse = Response(
                         data = ResponseData(responseBody),
                         statusCode = response.code,
@@ -62,8 +61,8 @@ open class NetworkDispatcher: Dispatcher {
                     task.fail(RequestError.ServerError(response.code, similarResponse))
                     return
                 }
-                if (response.body?.contentLength() == null) {
-                    task.fail(RequestError.NoData)
+                if (response.body.contentLength() == 0L) {
+                    task.fail(RequestError.NoData())
                     return
                 }
                 task.complete(Response(response))

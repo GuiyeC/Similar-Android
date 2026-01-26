@@ -1,5 +1,6 @@
 package com.guiyec.similar
 
+import okio.IOException
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 
@@ -28,8 +29,7 @@ data class ResponseData(override val bytes: ByteArray): Response.Data {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
         other as ResponseData
-        if (!bytes.contentEquals(other.bytes)) return false
-        return true
+        return bytes.contentEquals(other.bytes)
     }
 
     override fun hashCode(): Int {
@@ -40,14 +40,20 @@ data class ResponseData(override val bytes: ByteArray): Response.Data {
 }
 
 data class OkhttpData(private val response: okhttp3.Response): Response.Data {
-    override val inputStream: InputStream get() = response.body!!.byteStream()
+    override val inputStream: InputStream get() = response.body.byteStream()
     private var _bytes: ByteArray? = null
     override val bytes: ByteArray
         get() {
             _bytes?.let { return it }
             _string?.let { return it.toByteArray(Charsets.UTF_8) }
-            val bytes = response.body?.bytes() ?: byteArrayOf()
+            val bytes = try {
+                response.body.bytes()
+            } catch (e: IOException) {
+                e.printStackTrace()
+                byteArrayOf()
+            }
             _bytes = bytes
+
             return bytes
         }
     private var _string: String? = null
@@ -55,7 +61,12 @@ data class OkhttpData(private val response: okhttp3.Response): Response.Data {
         get() {
             _string?.let { return it }
             _bytes?.let { return bytes.toString(Charsets.UTF_8) }
-            val string = response.body?.string() ?: ""
+            val string = try {
+                response.body.string()
+            } catch (e: IOException) {
+                e.printStackTrace()
+                ""
+            }
             _string = string
             return string
         }

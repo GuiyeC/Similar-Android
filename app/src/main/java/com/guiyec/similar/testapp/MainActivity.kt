@@ -6,7 +6,6 @@ import android.util.Log
 import com.guiyec.similar.*
 import kotlinx.serialization.Required
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 @Serializable
@@ -50,12 +49,12 @@ class MainActivity : Activity() {
         Log.d("MainAc", "JSON: ${Json.encodeToString(LoginRequest())}")
         Log.d("MainAc", "JSON2: ${Json.encodeToString(LoginRequest2(password = "cityslicka"))}")
 
-//        val request = Request(
-//            path = "https://reqres.in/api/login",
-//            method = HttpMethod.Post,
-//            parameters = mapOf(Pair("page", "2"), Pair("page_size", "2c"), Pair("page", "B")),
-//            data = Request.Data.Json(LoginRequest2(password = "cityslicka"), LoginRequest2.serializer())
-//        )
+        val request = Request(
+            path = "https://reqres.in/api/login",
+            method = HttpMethod.Post,
+            parameters = mapOf(Pair("page", "2"), Pair("page_size", "2c"), Pair("page", "B")),
+            data = Request.Data.Json(LoginRequest2(password = "cityslicka"), LoginRequest2.serializer())
+        )
 //        val file = assets.open("large-file.json")
 //        val request = Request("https://reqres.in/api/login", method = HttpMethod.Post, parameters = mapOf(Pair("page", "2"), Pair("page_size", "2c"), Pair("page", "B")), data = Request.Data.Multipart(
 //            listOf(
@@ -78,10 +77,11 @@ class MainActivity : Activity() {
 //
 //        repo.sink {  }
 
-        dispatcher.execute(Request("http://ipv4.download.thinkbroadband.com/20MB.zip"))
+        dispatcher.execute(Request("https://raw.githubusercontent.com/TestFileHub/FileHub/main/pdf/pdf20mb.pdf"))
+//        dispatcher.execute(Request("http://ipv6.download.thinkbroadband.com/20MB.zip"))
             .progress { Log.d("NetworkDispatcher", "Progress $it") }
             .sink {
-                it.data.toString()
+                it.data.string
                 Log.d("NetworkDispatcher","Complete")
             }
             .catch { Log.d("NetworkDispatcher","Failed") }
