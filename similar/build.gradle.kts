@@ -1,6 +1,9 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.vanniktech.maven)
 }
 
 // To publish:
@@ -37,6 +40,41 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+}
+
+mavenPublishing {
+    coordinates("com.guiyec.similar", "similar", "0.9.6")
+
+    pom {
+        name.set("Similar")
+        description.set("Android networking library that allows having similar code in multiplatform apps.")
+        inceptionYear.set("2020")
+        url.set("https://github.com/guiyec/Similar-Android")
+        licenses {
+            license {
+                name.set("MIT")
+                url.set("https://opensource.org/licenses/mit-license.php")
+                distribution.set("repo")
+            }
+        }
+        developers {
+            developer {
+                id.set("guiyec")
+                name.set("Guillermo Cique")
+                url.set("https://github.com/GuiyeC")
+                email.set("guiyec@gmail.com")
+            }
+        }
+        scm {
+            url.set("https://github.com/guiyec/Similar-Android.git")
+            connection.set("scm:git@github.com:guiyec/Similar-Android.git")
+            developerConnection.set("scm:git@github.com:guiyec/Similar-Android.git")
+        }
+    }
+
+    publishToMavenCentral(SonatypeHost.DEFAULT, automaticRelease = true)
+
+    signAllPublications()
 }
 
 dependencies {
