@@ -6,14 +6,6 @@ plugins {
     alias(libs.plugins.vanniktech.maven)
 }
 
-// To publish:
-// ./gradlew similar:publishReleasePublicationToSonatypeRepository
-//ext {
-//    PUBLISH_GROUP_ID = 'com.guiyec.similar'
-//    PUBLISH_VERSION = '0.9.6'
-//    PUBLISH_ARTIFACT_ID = 'similar'
-//}
-
 android {
     namespace = "com.guiyec.similar"
     compileSdk {
@@ -42,6 +34,7 @@ android {
     }
 }
 
+// To publish: ./gradlew publishToMavenCentral
 mavenPublishing {
     coordinates("com.guiyec.similar", "similar", "0.9.6")
 
