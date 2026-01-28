@@ -61,10 +61,6 @@ open class NetworkDispatcher: Dispatcher {
                     task.fail(RequestError.ServerError(response.code, similarResponse))
                     return
                 }
-                if (response.body.contentLength() == 0L) {
-                    task.fail(RequestError.NoData())
-                    return
-                }
                 task.complete(Response(response))
             }
 

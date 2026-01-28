@@ -13,7 +13,7 @@ junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 
 # Publishing
-vanniktechMaven = "0.30.0"
+vanniktechMaven = "0.36.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

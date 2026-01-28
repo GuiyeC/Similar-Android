@@ -1,5 +1,3 @@
-import com.vanniktech.maven.publish.SonatypeHost
-
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
@@ -36,7 +34,7 @@ android {
 
 // To publish: ./gradlew publishToMavenCentral
 mavenPublishing {
-    coordinates("com.guiyec.similar", "similar", "0.9.6")
+    coordinates("com.guiyec.similar", "similar", "0.9.7")
 
     pom {
         name.set("Similar")
@@ -65,7 +63,7 @@ mavenPublishing {
         }
     }
 
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
+    publishToMavenCentral(automaticRelease = true)
 
     signAllPublications()
 }
