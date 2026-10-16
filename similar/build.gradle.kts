@@ -7,14 +7,19 @@ plugins {
 android {
     namespace = "com.guiyec.similar"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
 
     defaultConfig {
-        minSdk = 16
+        minSdk = 21
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        // AGP defaults this to compileSdk; don't force consumers onto the latest SDK
+        aarMetadata {
+            minCompileSdk = 21
+        }
     }
 
     buildTypes {
@@ -27,14 +32,14 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
 // To publish: ./gradlew publishToMavenCentral
 mavenPublishing {
-    coordinates("com.guiyec.similar", "similar", "0.9.7")
+    coordinates("com.guiyec.similar", "similar", "0.10.0")
 
     pom {
         name.set("Similar")
@@ -69,7 +74,6 @@ mavenPublishing {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.android)
     api(libs.kotlinx.serialization.json)

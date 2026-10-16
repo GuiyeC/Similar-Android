@@ -39,6 +39,7 @@ data class Request(
         }
     }
 
+    @ConsistentCopyVisibility
     data class DataPart internal constructor(val name: String, val fileName: String? = null, val data: RequestBody) {
         constructor(name: String, fileName: String? = null, mimeType: String? = null, data: String) :
                 this(name, fileName, data.toRequestBody(mimeType?.toMediaTypeOrNull()))

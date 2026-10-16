@@ -90,6 +90,23 @@ class Task<Output> {
         clearBlocks()
     }
 
+    /**
+     * Completes the task like [complete], but returns false instead of throwing when the task
+     * already has a result or was cancelled. Meant for callbacks that may report more than once.
+     */
+    fun tryComplete(output: Output): Boolean {
+        if (state != TaskState.Alive) return false
+        complete(output)
+        return true
+    }
+
+    /** Fails the task like [fail], with the same rules as [tryComplete]. */
+    fun tryFail(error: RequestError): Boolean {
+        if (state != TaskState.Alive) return false
+        fail(error)
+        return true
+    }
+
     internal fun clearBlocks() {
         blocks.clear()
         cancelBlock = null
